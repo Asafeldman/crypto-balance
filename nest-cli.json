@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "monorepo": true,
+  "root": "apps/balance-service",
+  "sourceRoot": "apps/balance-service/src",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/balance-service/tsconfig.app.json",
+    "deleteOutDir": true
+  },
+  "projects": {
+    "balance-service": {
+      "type": "application",
+      "root": "apps/balance-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/balance-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/balance-service/tsconfig.app.json"
+      }
+    },
+    "rate-service": {
+      "type": "application",
+      "root": "apps/rate-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/rate-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/rate-service/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+  }
+}

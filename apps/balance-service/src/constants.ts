@@ -1,0 +1,1 @@
+export const PORT = process.env.BALANCE_SERVICE_PORT || 3000; 
