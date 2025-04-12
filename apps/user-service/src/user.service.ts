@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
-import * as path from 'path';
-import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 import { User, UsersFile } from './interfaces/user.interface';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,51 +13,12 @@ export class UserService {
   private readonly walletsFilePath: string;
 
   constructor(private readonly fileManagementService: FileManagementService) {
-    this.usersFilePath = this.resolveDataPath('users.json');
-    this.walletsFilePath = this.resolveDataPath('wallets.json');
-    this.ensureDataFilesExist();
-  }
-  
-  private resolveDataPath(filename: string): string {
-    const sharedPath = path.resolve(process.cwd(), 'libs/shared/src/file-management/data', filename);
-    if (fs.existsSync(sharedPath)) {
-      return sharedPath;
-    }
-    
-    const distPath = path.resolve(process.cwd(), 'dist/libs/shared/file-management/data', filename);
-    if (fs.existsSync(distPath)) {
-      return distPath;
-    }
-    
-    return path.resolve(__dirname, '../../../libs/shared/src/file-management/data', filename);
-  }
-  
-  private ensureDataFilesExist(): void {
-    try {
-      const distDir = path.resolve(process.cwd(), 'dist/libs/shared/file-management/data');
-      
-      if (!fs.existsSync(distDir)) {
-        fs.mkdirSync(distDir, { recursive: true });
-      }
-      
-      const files = ['users.json', 'wallets.json'];
-      
-      for (const file of files) {
-        const srcPath = path.resolve(process.cwd(), 'libs/shared/src/file-management/data', file);
-        const distPath = path.resolve(distDir, file);
-        
-        if (fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-          const data = fs.readFileSync(srcPath);
-          fs.writeFileSync(distPath, data);
-        }
-        else if (!fs.existsSync(distPath)) {
-          const emptyContent = '{"users":[]}';
-          fs.writeFileSync(distPath, emptyContent);
-        }
-      }
-    } catch (error) {
-      console.error(`Error ensuring data files exist: ${error.message}`);
-    }
+    this.usersFilePath = this.fileManagementService.resolveDataPath('users.json');
+    this.walletsFilePath = this.fileManagementService.resolveDataPath('wallets.json');
+    this.fileManagementService.ensureDataFilesExist([
+      { filename: 'users.json', emptyContent: '{"users":[]}' },
+      { filename: 'wallets.json', emptyContent: '{"wallets":[]}' }
+    ]);
   }
 
   getAllUsers(): User[] {
