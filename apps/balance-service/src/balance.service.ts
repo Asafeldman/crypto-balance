@@ -1,93 +1,41 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
 import { Balance } from '../../../libs/shared/src/interfaces/balance.interface';
-import * as path from 'path';
-import * as fs from 'fs';
 import { randomUUID } from 'crypto';
 import { BalancesFile } from './interfaces/balance.interface';
-import { User, UsersFile } from './interfaces/user.interface';
-import { Wallet, WalletsFile } from './interfaces/wallet.interface';
 
 @Injectable()
 export class BalanceService {
-  private readonly usersFilePath: string;
-  private readonly walletsFilePath: string;
   private readonly balancesFilePath: string;
+  private readonly userServiceUrl = 'http://localhost:3002/users';
 
-  constructor(private readonly fileManagementService: FileManagementService) {
-    this.usersFilePath = this.resolveDataPath('users.json');
-    this.walletsFilePath = this.resolveDataPath('wallets.json');
-    this.balancesFilePath = this.resolveDataPath('balances.json');
-    this.ensureDataFilesExist();
-  }
-  
-  private resolveDataPath(filename: string): string {
-    const sharedPath = path.resolve(process.cwd(), 'libs/shared/src/file-management/data', filename);
-    if (fs.existsSync(sharedPath)) {
-      return sharedPath;
-    }
-    
-    const distPath = path.resolve(process.cwd(), 'dist/libs/shared/file-management/data', filename);
-    if (fs.existsSync(distPath)) {
-      return distPath;
-    }
-    
-    return path.resolve(__dirname, '../../../libs/shared/src/file-management/data', filename);
-  }
-  
-  private ensureDataFilesExist(): void {
-    try {
-      const distDir = path.resolve(process.cwd(), 'dist/libs/shared/file-management/data');
-      
-      if (!fs.existsSync(distDir)) {
-        fs.mkdirSync(distDir, { recursive: true });
-      }
-      
-      const files = ['users.json', 'wallets.json', 'balances.json'];
-      
-      for (const file of files) {
-        const srcPath = path.resolve(process.cwd(), 'libs/shared/src/file-management/data', file);
-        const distPath = path.resolve(distDir, file);
-        
-        if (fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-          const data = fs.readFileSync(srcPath);
-          fs.writeFileSync(distPath, data);
-        }
-        else if (!fs.existsSync(distPath)) {
-          const emptyContent = file === 'users.json' 
-            ? '{"users":[]}' 
-            : file === 'wallets.json' 
-              ? '{"wallets":[]}' 
-              : '{"balances":[]}';
-          
-          fs.writeFileSync(distPath, emptyContent);
-        }
-      }
-    } catch (error) {
-      console.error(`Error ensuring data files exist: ${error.message}`);
-    }
+  constructor(
+    private readonly fileManagementService: FileManagementService,
+    private readonly httpService: HttpService
+  ) {
+    this.balancesFilePath = this.fileManagementService.resolveDataPath('balances.json');
+    this.fileManagementService.ensureDataFilesExist([
+      { filename: 'balances.json', emptyContent: '{"balances":[]}' }
+    ]);
   }
 
-  // TODO: After user-service implementation, this should call the user-service API instead of direct file access
-  getUserWallets(userId: string): string[] {
+  async getUserWallets(userId: string): Promise<string[]> {
     try {
-      const usersData = this.fileManagementService.readJsonFile<UsersFile>(this.usersFilePath);
-      const user = usersData.users.find(u => u.userId === userId);
-      
-      if (!user) {
-        return [];
-      }
-      
-      return user.walletIds;
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.userServiceUrl}/${userId}/wallets`)
+      );
+      return response.data.map(wallet => wallet.walletId);
     } catch (error) {
-      console.error(`Error reading user wallets: ${error.message}`);
+      console.error(`Error getting wallets for user ${userId}: ${error.message}`);
       return [];
     }
   }
 
-  getBalances(userId: string): Balance[] {
+  async getBalances(userId: string): Promise<Balance[]> {
     try {
-      const walletIds = this.getUserWallets(userId);
+      const walletIds = await this.getUserWallets(userId);
       
       if (walletIds.length === 0) {
         return [];
@@ -110,9 +58,9 @@ export class BalanceService {
     }
   }
 
-  getBalanceById(userId: string, balanceId: string): Balance | null {
+  async getBalanceById(userId: string, balanceId: string): Promise<Balance | null> {
     try {
-      const walletIds = this.getUserWallets(userId);
+      const walletIds = await this.getUserWallets(userId);
       
       if (walletIds.length === 0) {
         return null;
@@ -134,40 +82,6 @@ export class BalanceService {
     } catch (error) {
       console.error(`Error finding balance: ${error.message}`);
       return null;
-    }
-  }
-
-  // TODO: Refactor this method - User creation should move to user-service, but wallet creation should remain in balance-service
-  createUserWithWallet(userName: string, email: string, walletName: string): { userId: string; walletId: string } {
-    try {
-      const usersData = this.fileManagementService.readJsonFile<UsersFile>(this.usersFilePath);
-      const walletsData = this.fileManagementService.readJsonFile<WalletsFile>(this.walletsFilePath);
-      
-      const userId = randomUUID();
-      const walletId = randomUUID();
-      const now = new Date().toISOString();
-      
-      usersData.users.push({
-        userId,
-        walletIds: [walletId],
-        userName,
-        email
-      });
-      
-      walletsData.wallets.push({
-        walletId,
-        userId,
-        name: walletName,
-        createdAt: now
-      });
-      
-      this.fileManagementService.writeJsonFile(this.usersFilePath, usersData);
-      this.fileManagementService.writeJsonFile(this.walletsFilePath, walletsData);
-      
-      return { userId, walletId };
-    } catch (error) {
-      console.error(`Error creating user wallet: ${error.message}`);
-      throw new Error('Could not create user wallet');
     }
   }
 
@@ -232,11 +146,15 @@ export class BalanceService {
     }
   }
 
-  updateBalance(userId: string, balanceId: string, amount: number): Balance | null {
+  async updateBalance(userId: string, balanceId: string, amount: number, walletId: string): Promise<Balance | null> {
     try {
-      const walletIds = this.getUserWallets(userId);
+      const walletIds = await this.getUserWallets(userId);
       
       if (walletIds.length === 0) {
+        return null;
+      }
+      
+      if (!walletIds.includes(walletId)) {
         return null;
       }
       
@@ -249,7 +167,7 @@ export class BalanceService {
       
       const balance = balancesData.balances[balanceIndex];
       
-      if (!walletIds.includes(balance.walletId)) {
+      if (balance.walletId !== walletId) {
         return null;
       }
       
@@ -270,9 +188,9 @@ export class BalanceService {
     }
   }
 
-  removeBalance(userId: string, balanceId: string): string | null {
+  async removeBalance(userId: string, balanceId: string): Promise<string | null> {
     try {
-      const walletIds = this.getUserWallets(userId);
+      const walletIds = await this.getUserWallets(userId);
       
       if (walletIds.length === 0) {
         return null;
