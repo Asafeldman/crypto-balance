@@ -5,13 +5,13 @@ import { FileManagementService } from '../../../libs/shared/src/file-management/
 import { Balance } from '../../../libs/shared/src/interfaces/balance.interface';
 import { randomUUID } from 'crypto';
 import { BalancesFile } from './interfaces/balance.interface';
-import { COINGECKO_API_URL, COINGECKO_API_KEY, RATE_SERVICE_URL } from './constants';
+import { EXTERNAL_APIS, SERVICES } from '../../../libs/shared/src/constants';
 
 @Injectable()
 export class BalanceService {
   private readonly balancesFilePath: string;
-  private readonly userServiceUrl = 'http://localhost:3002/users';
-  private readonly rateServiceUrl = RATE_SERVICE_URL;
+  private readonly userServiceUrl = `${SERVICES.USER.URL}/users`;
+  private readonly rateServiceUrl = SERVICES.RATE.URL;
 
   constructor(
     private readonly fileManagementService: FileManagementService,
@@ -73,9 +73,9 @@ export class BalanceService {
 
   async validateAsset(assetId: string): Promise<boolean> {
     try {
-      const headers = { 'x-cg-api-key': COINGECKO_API_KEY };
+      const headers = { 'x-cg-api-key': EXTERNAL_APIS.COINGECKO.API_KEY };
       await firstValueFrom(
-        this.httpService.get(`${COINGECKO_API_URL}/coins/${assetId}`, { headers })
+        this.httpService.get(`${EXTERNAL_APIS.COINGECKO.BASE_URL}/coins/${assetId}`, { headers })
       );
       return true;
     } catch (error) {

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
-import { CACHE_TTL_MS, COINGECKO_API_KEY, COINGECKO_API_URL } from './constants';
+import { APP_SETTINGS, EXTERNAL_APIS } from '../../../libs/shared/src/constants';
 import { CoinRate, RateOptions, RatesFile } from './interfaces/rate.interface';
 
 @Injectable()
@@ -93,7 +93,7 @@ export class RateService {
       
       const isCoinStale = isCoinInCache ? 
         (coinRate?.lastUpdated ? 
-          (now.getTime() - new Date(coinRate.lastUpdated).getTime() > CACHE_TTL_MS)
+          (now.getTime() - new Date(coinRate.lastUpdated).getTime() > APP_SETTINGS.CACHE.TTL_MS)
           : true)
         : false;
       
@@ -355,7 +355,7 @@ export class RateService {
     
     const lastUpdated = new Date(coinRate.lastUpdated);
     const now = new Date();
-    return now.getTime() - lastUpdated.getTime() > CACHE_TTL_MS;
+    return now.getTime() - lastUpdated.getTime() > APP_SETTINGS.CACHE.TTL_MS;
   }
   
   private async fetchRatesFromApi(coinIds: string[], options?: RateOptions): Promise<CoinRate[]> {
@@ -363,8 +363,8 @@ export class RateService {
       return [];
     }
     
-    const url = `${COINGECKO_API_URL}/simple/price`;
-    const headers = { 'x-cg-api-key': COINGECKO_API_KEY };
+    const url = `${EXTERNAL_APIS.COINGECKO.BASE_URL}/simple/price`;
+    const headers = { 'x-cg-api-key': EXTERNAL_APIS.COINGECKO.API_KEY };
     
     const vsCurrencies = options?.vsCurrencies || 'usd';
     

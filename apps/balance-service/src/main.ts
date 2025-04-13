@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { BalanceModule } from './balance.module';
-import { PORT } from './constants';
+import { SERVICES } from '../../../libs/shared/src/constants';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
@@ -14,6 +14,7 @@ async function bootstrap() {
     }),
   );
   
-  await app.listen(PORT);
+  await app.listen(SERVICES.BALANCE.PORT);
+  console.log(`Balance service is running on: ${SERVICES.BALANCE.URL}`);
 }
 bootstrap();

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { UserModule } from './user.module';
+import { SERVICES } from '../../../libs/shared/src/constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(UserModule);
@@ -12,8 +13,8 @@ async function bootstrap() {
   }));
   
   app.enableCors();
-  await app.listen(3002);
-  console.log(`User service is running on: http://localhost:3002`);
+  await app.listen(SERVICES.USER.PORT);
+  console.log(`User service is running on: ${SERVICES.USER.URL}`);
 }
 
 bootstrap(); 
