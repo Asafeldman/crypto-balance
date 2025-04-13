@@ -128,7 +128,3 @@ npm run start:dev
 - The project uses a file-based data storage system for simplicity
 - Rate caching is implemented to avoid hitting CoinGecko rate limits
 - The monorepo structure allows for shared code between services
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
