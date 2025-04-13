@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { RateService } from './rate.service';
 import { CoinRate } from './interfaces/rate.interface';
 
@@ -6,38 +6,20 @@ import { CoinRate } from './interfaces/rate.interface';
 export class RateController {
   constructor(private readonly rateService: RateService) {}
 
-  @Get(':coinIds')
-  async getRatesByIds(
-    @Param('coinIds') coinIds: string,
+  @Get()
+  async getRates(
+    @Query('ids') ids?: string,
     @Query('vs_currencies') vsCurrencies?: string
-  ): Promise<CoinRate[] | CoinRate | null> {
-    const ids = coinIds.split(',');
-    
-    if (ids.length === 1) {
-      return this.rateService.getRateById(
-        ids[0], 
-        {
-          vsCurrencies: vsCurrencies || 'usd'
-        }
-      );
+  ): Promise<CoinRate[] | null> {
+    if (!ids) {
+      return this.rateService.getAllRates({
+        vsCurrencies: vsCurrencies || 'usd'
+      });
     }
     
-    return this.rateService.getRatesByIds(
-      ids, 
-      {
-        vsCurrencies: vsCurrencies || 'usd'
-      }
-    );
-  }
-
-  @Get()
-  async getAllRates(
-    @Query('vs_currencies') vsCurrencies?: string
-  ): Promise<CoinRate[]> {
-    return this.rateService.getAllRates(
-      {
-        vsCurrencies: vsCurrencies || 'usd'
-      }
-    );
+    const coinIds = ids.split(',');
+    return this.rateService.getRatesByIds(coinIds, {
+      vsCurrencies: vsCurrencies || 'usd'
+    });
   }
 } 
