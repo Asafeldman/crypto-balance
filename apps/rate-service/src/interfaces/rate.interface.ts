@@ -8,13 +8,11 @@ export interface RateOptions {
 
 export interface CoinRate {
   id: string;
-  name: string;
-  symbol: string;
   currencyRateMap: CurrencyRateMap;
-  lastUpdated: string; // ISO format timestamp for this coin's rates
+  lastUpdated: string; 
 }
 
 export interface RatesFile {
   rates: CoinRate[];
-  globalLastUpdated: string; // ISO format timestamp for the entire file
+  globalLastUpdated: string; 
 } 

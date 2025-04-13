@@ -396,8 +396,6 @@ export class RateService {
       
       return {
         id,
-        name: '',
-        symbol: '',
         currencyRateMap,
         lastUpdated: data.last_updated_at 
           ? new Date(data.last_updated_at * 1000).toISOString() 
