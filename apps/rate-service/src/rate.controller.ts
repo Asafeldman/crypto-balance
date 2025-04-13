@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { RateService } from './rate.service';
-import { CoinRate } from './interfaces/rate.interface';
+import { CoinRate } from '../../../libs/shared/src/interfaces/rate.interface';
 
 @Controller('rates')
 export class RateController {

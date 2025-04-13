@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
 import { APP_SETTINGS, EXTERNAL_APIS } from '../../../libs/shared/src/constants';
-import { CoinRate, RateOptions, RatesFile } from './interfaces/rate.interface';
+import { CoinRate, RateOptions, RatesFile } from '../../../libs/shared/src/interfaces/rate.interface';
 
 @Injectable()
 export class RateService {

@@ -3,8 +3,8 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateWalletDto } from './dto/create-wallet.dto';
-import { User } from './interfaces/user.interface';
-import { Wallet } from './interfaces/wallet.interface';
+import { User } from '../../../libs/shared/src/interfaces/user.interface';
+import { Wallet } from '../../../libs/shared/src/interfaces/wallet.interface';
 
 @Controller('users')
 export class UserController {

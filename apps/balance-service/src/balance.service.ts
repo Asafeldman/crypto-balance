@@ -2,9 +2,8 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
-import { Balance } from '../../../libs/shared/src/interfaces/balance.interface';
+import { Balance, BalancesFile } from '../../../libs/shared/src/interfaces/balance.interface';
 import { randomUUID } from 'crypto';
-import { BalancesFile } from './interfaces/balance.interface';
 import { EXTERNAL_APIS, SERVICES } from '../../../libs/shared/src/constants';
 
 @Injectable()
