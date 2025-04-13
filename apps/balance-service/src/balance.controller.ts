@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, NotFoundException, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, NotFoundException, BadRequestException, Param, Post, Put, Query } from '@nestjs/common';
 import { BalanceService } from './balance.service';
 import { Balance } from '../../../libs/shared/src/interfaces/balance.interface';
 import { AddBalanceDto } from './dto/add-balance.dto';
@@ -8,12 +8,39 @@ import { UpdateBalanceDto } from './dto/update-balance.dto';
 export class BalanceController {
   constructor(private readonly balanceService: BalanceService) {}
 
+  @Get('total')
+  async getTotalBalance(
+    @Headers('X-User-ID') userId: string,
+    @Query('currency') currency: string = 'usd'
+  ): Promise<{ total: number; currency: string }> {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+    
+    try {
+      return await this.balanceService.getTotalBalance(userId, currency.toLowerCase());
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException(`Error calculating total balance: ${error.message}`);
+    }
+  }
+
   @Get()
   async getBalances(@Headers('X-User-ID') userId: string): Promise<Balance[]> {
     if (!userId) {
-      throw new NotFoundException('User ID is required');
+      throw new BadRequestException('User ID is required');
     }
-    return this.balanceService.getBalances(userId);
+    
+    try {
+      return await this.balanceService.getBalances(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new NotFoundException('Error fetching balances');
+    }
   }
 
   @Get(':balanceId')
@@ -22,16 +49,23 @@ export class BalanceController {
     @Param('balanceId') balanceId: string,
   ): Promise<Balance> {
     if (!userId) {
-      throw new NotFoundException('User ID is required');
+      throw new BadRequestException('User ID is required');
     }
     
-    const balance = await this.balanceService.getBalanceById(userId, balanceId);
-    
-    if (!balance) {
-      throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+    try {
+      const balance = await this.balanceService.getBalanceById(userId, balanceId);
+      
+      if (!balance) {
+        throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+      }
+      
+      return balance;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new NotFoundException(`Error fetching balance with ID ${balanceId}`);
     }
-    
-    return balance;
   }
 
   @Post()
@@ -40,17 +74,25 @@ export class BalanceController {
     @Body() addBalanceDto: AddBalanceDto,
   ): Promise<Balance> {
     if (!userId) {
-      throw new NotFoundException('User ID is required');
+      throw new BadRequestException('User ID is required');
     }
     
     const { asset, amount, walletId } = addBalanceDto;
-    const balance = await this.balanceService.addBalance(userId, asset, amount, walletId);
     
-    if (!balance) {
-      throw new NotFoundException(`Failed to add balance for user ${userId}`);
+    try {
+      const balance = await this.balanceService.addBalance(userId, asset, amount, walletId);
+      
+      if (!balance) {
+        throw new NotFoundException(`Failed to add balance for user ${userId}`);
+      }
+      
+      return balance;
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException(`Failed to add balance for user ${userId}: ${error.message}`);
     }
-    
-    return balance;
   }
 
   @Put(':balanceId')
@@ -60,21 +102,28 @@ export class BalanceController {
     @Body() updateBalanceDto: UpdateBalanceDto,
   ): Promise<Balance> {
     if (!userId) {
-      throw new NotFoundException('User ID is required');
+      throw new BadRequestException('User ID is required');
     }
     
-    const balance = await this.balanceService.updateBalance(
-      userId, 
-      balanceId, 
-      updateBalanceDto.amount,
-      updateBalanceDto.walletId
-    );
-    
-    if (!balance) {
-      throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+    try {
+      const balance = await this.balanceService.updateBalance(
+        userId, 
+        balanceId, 
+        updateBalanceDto.amount,
+        updateBalanceDto.walletId
+      );
+      
+      if (!balance) {
+        throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+      }
+      
+      return balance;
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException(`Failed to update balance with ID ${balanceId}: ${error.message}`);
     }
-    
-    return balance;
   }
 
   @Delete(':balanceId')
@@ -83,18 +132,22 @@ export class BalanceController {
     @Param('balanceId') balanceId: string,
   ): Promise<{ balanceId: string }> {
     if (!userId) {
-      throw new NotFoundException('User ID is required');
+      throw new BadRequestException('User ID is required');
     }
     
-    const removedBalanceId = await this.balanceService.removeBalance(userId, balanceId);
-    
-    if (!removedBalanceId) {
-      throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+    try {
+      const removedBalanceId = await this.balanceService.removeBalance(userId, balanceId);
+      
+      if (!removedBalanceId) {
+        throw new NotFoundException(`Balance with ID ${balanceId} not found or doesn't belong to user ${userId}`);
+      }
+      
+      return { balanceId: removedBalanceId };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException(`Failed to remove balance with ID ${balanceId}: ${error.message}`);
     }
-    
-    return { balanceId: removedBalanceId };
   }
-
-  // TODO: Add a method that calculates the total balance for a user in a specified currency after implementing the rate service
-  // GET /balances/total?currency=USD
 }
