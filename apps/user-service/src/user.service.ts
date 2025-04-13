@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
 import { randomUUID } from 'crypto';
-import { User, UsersFile } from './interfaces/user.interface';
+import { User, UsersFile } from '../../../libs/shared/src/interfaces/user.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateWalletDto } from './dto/create-wallet.dto';
-import { Wallet, WalletsFile } from './interfaces/wallet.interface';
+import { Wallet, WalletsFile } from '../../../libs/shared/src/interfaces/wallet.interface';
 
 @Injectable()
 export class UserService {

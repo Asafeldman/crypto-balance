@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { RateService } from '../rate.service';
-import { RATE_REFRESH_INTERVAL } from '../constants';
+import { SERVICES } from '../../../../libs/shared/src/constants';
 
 @Injectable()
 export class RateRefreshTask {
@@ -9,7 +9,7 @@ export class RateRefreshTask {
   
   constructor(private readonly rateService: RateService) {}
   
-  @Cron(RATE_REFRESH_INTERVAL)
+  @Cron(SERVICES.RATE.REFRESH_INTERVAL)
   async refreshRates() {
     this.logger.log('Starting scheduled rate refresh...');
     

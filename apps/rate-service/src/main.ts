@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { RateModule } from './rate.module';
-import { PORT } from './constants';
+import { SERVICES } from '../../../libs/shared/src/constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(RateModule);
-  await app.listen(PORT);
+  await app.listen(SERVICES.RATE.PORT);
+  console.log(`Rate service is running on: ${SERVICES.RATE.URL}`);
 }
 bootstrap(); 

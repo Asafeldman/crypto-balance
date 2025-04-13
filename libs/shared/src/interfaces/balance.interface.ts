@@ -9,4 +9,8 @@ export interface Balance {
     name?: string;
     decimals?: number;
   };
+}
+
+export interface BalancesFile {
+  balances: Balance[];
 } 
