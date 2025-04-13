@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString, IsUUID, Min, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 
 export class AddBalanceDto {
   @IsString()
@@ -9,8 +9,4 @@ export class AddBalanceDto {
   @IsNotEmpty()
   @Min(0)
   amount: number;
-  
-  @IsUUID()
-  @IsNotEmpty()
-  walletId: string;
 } 

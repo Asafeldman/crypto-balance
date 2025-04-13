@@ -34,55 +34,6 @@ export class BalanceService {
     }
   }
 
-  async getUserWallets(userId: string): Promise<string[]> {
-    try {
-      const userExists = await this.validateUserExists(userId);
-      if (!userExists) {
-        throw new NotFoundException(`User with ID ${userId} does not exist`);
-      }
-
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.userServiceUrl}/${userId}/wallets`)
-      );
-      
-      if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
-        console.warn(`No wallets found for user ${userId}`);
-        return [];
-      }
-      
-      return response.data.map(wallet => wallet.walletId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      console.error(`Error getting wallets for user ${userId}: ${error.message}`);
-      return [];
-    }
-  }
-
-  async validateWalletOwnership(userId: string, walletId: string): Promise<boolean> {
-    try {
-      const wallets = await this.getUserWallets(userId);
-      return wallets.includes(walletId);
-    } catch (error) {
-      console.error(`Error validating wallet ownership: ${error.message}`);
-      throw error;
-    }
-  }
-
-  async validateAsset(assetId: string): Promise<boolean> {
-    try {
-      const headers = { 'x-cg-api-key': EXTERNAL_APIS.COINGECKO.API_KEY };
-      await firstValueFrom(
-        this.httpService.get(`${EXTERNAL_APIS.COINGECKO.BASE_URL}/coins/${assetId}`, { headers })
-      );
-      return true;
-    } catch (error) {
-      console.error(`Error validating asset ${assetId}: ${error.message}`);
-      return false;
-    }
-  }
-
   async getBalances(userId: string): Promise<Balance[]> {
     try {
       const userExists = await this.validateUserExists(userId);
@@ -90,15 +41,9 @@ export class BalanceService {
         throw new NotFoundException(`User with ID ${userId} does not exist`);
       }
 
-      const walletIds = await this.getUserWallets(userId);
-      
-      if (walletIds.length === 0) {
-        return [];
-      }
-
       const balancesData = this.fileManagementService.readJsonFile<BalancesFile>(this.balancesFilePath);
       const userBalances = balancesData.balances.filter(
-        balance => walletIds.includes(balance.walletId)
+        balance => balance.userId === userId
       );
 
       return userBalances.map(balance => ({
@@ -123,12 +68,6 @@ export class BalanceService {
         throw new NotFoundException(`User with ID ${userId} does not exist`);
       }
       
-      const walletIds = await this.getUserWallets(userId);
-      
-      if (walletIds.length === 0) {
-        return null;
-      }
-      
       const balancesData = this.fileManagementService.readJsonFile<BalancesFile>(this.balancesFilePath);
       const balance = balancesData.balances.find(b => b.balanceId === balanceId);
       
@@ -136,7 +75,7 @@ export class BalanceService {
         throw new NotFoundException(`Balance with ID ${balanceId} not found`);
       }
       
-      if (!walletIds.includes(balance.walletId)) {
+      if (balance.userId !== userId) {
         throw new BadRequestException(`Balance with ID ${balanceId} does not belong to user ${userId}`);
       }
       
@@ -158,8 +97,7 @@ export class BalanceService {
   async addBalance(
     userId: string,
     asset: string,
-    amount: number,
-    walletId: string,
+    amount: number
   ): Promise<Balance | null> {
     try {
       const userExists = await this.validateUserExists(userId);
@@ -172,14 +110,9 @@ export class BalanceService {
         throw new BadRequestException(`Invalid asset: ${asset}. Please check the correct name for the asset you're trying to add.`);
       }
 
-      const isWalletOwned = await this.validateWalletOwnership(userId, walletId);
-      if (!isWalletOwned) {
-        throw new BadRequestException(`Wallet with ID ${walletId} does not belong to user ${userId}`);
-      }
-
       const balancesData = this.fileManagementService.readJsonFile<BalancesFile>(this.balancesFilePath);
       const existingBalanceIndex = balancesData.balances.findIndex(
-        b => b.walletId === walletId && b.asset === asset
+        b => b.userId === userId && b.asset === asset
       );
       
       const now = new Date().toISOString();
@@ -199,7 +132,7 @@ export class BalanceService {
       } else {
         const newBalance = {
           balanceId: randomUUID(),
-          walletId,
+          userId,
           asset,
           amount,
           lastUpdated: now
@@ -224,18 +157,13 @@ export class BalanceService {
     }
   }
 
-  async updateBalance(userId: string, balanceId: string, amount: number, walletId: string): Promise<Balance | null> {
+  async updateBalance(userId: string, balanceId: string, amount: number): Promise<Balance | null> {
     try {
       const userExists = await this.validateUserExists(userId);
       if (!userExists) {
         throw new NotFoundException(`User with ID ${userId} does not exist`);
       }
 
-      const isWalletOwned = await this.validateWalletOwnership(userId, walletId);
-      if (!isWalletOwned) {
-        throw new BadRequestException(`Wallet with ID ${walletId} does not belong to user ${userId}`);
-      }
-      
       const balancesData = this.fileManagementService.readJsonFile<BalancesFile>(this.balancesFilePath);
       const balanceIndex = balancesData.balances.findIndex(b => b.balanceId === balanceId);
       
@@ -245,17 +173,22 @@ export class BalanceService {
       
       const balance = balancesData.balances[balanceIndex];
       
-      if (balance.walletId !== walletId) {
-        throw new BadRequestException(`Balance with ID ${balanceId} does not belong to wallet ${walletId}`);
+      if (balance.userId !== userId) {
+        throw new BadRequestException(`Balance with ID ${balanceId} does not belong to user ${userId}`);
       }
       
-      balancesData.balances[balanceIndex].amount = amount;
-      balancesData.balances[balanceIndex].lastUpdated = new Date().toISOString();
+      if (amount < 0) {
+        throw new BadRequestException('Amount must be non-negative');
+      }
       
+      balance.amount = amount;
+      balance.lastUpdated = new Date().toISOString();
+      
+      balancesData.balances[balanceIndex] = balance;
       this.fileManagementService.writeJsonFile(this.balancesFilePath, balancesData);
       
       return {
-        ...balancesData.balances[balanceIndex],
+        ...balance,
         assetMetadata: {
           symbol: balance.asset
         }
@@ -285,8 +218,7 @@ export class BalanceService {
       
       const balance = balancesData.balances[balanceIndex];
       
-      const walletIds = await this.getUserWallets(userId);
-      if (!walletIds.includes(balance.walletId)) {
+      if (balance.userId !== userId) {
         throw new BadRequestException(`Balance with ID ${balanceId} does not belong to user ${userId}`);
       }
       
@@ -375,6 +307,19 @@ export class BalanceService {
     } catch (error) {
       console.error(`Error fetching rates from rate service: ${error.message}`);
       return {};
+    }
+  }
+
+  async validateAsset(assetId: string): Promise<boolean> {
+    try {
+      const headers = { 'x-cg-api-key': EXTERNAL_APIS.COINGECKO.API_KEY };
+      await firstValueFrom(
+        this.httpService.get(`${EXTERNAL_APIS.COINGECKO.BASE_URL}/coins/${assetId}`, { headers })
+      );
+      return true;
+    } catch (error) {
+      console.error(`Error validating asset ${assetId}: ${error.message}`);
+      return false;
     }
   }
 }

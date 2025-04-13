@@ -77,10 +77,10 @@ export class BalanceController {
       throw new BadRequestException('User ID is required');
     }
     
-    const { asset, amount, walletId } = addBalanceDto;
+    const { asset, amount } = addBalanceDto;
     
     try {
-      const balance = await this.balanceService.addBalance(userId, asset, amount, walletId);
+      const balance = await this.balanceService.addBalance(userId, asset, amount);
       
       if (!balance) {
         throw new NotFoundException(`Failed to add balance for user ${userId}`);
@@ -109,8 +109,7 @@ export class BalanceController {
       const balance = await this.balanceService.updateBalance(
         userId, 
         balanceId, 
-        updateBalanceDto.amount,
-        updateBalanceDto.walletId
+        updateBalanceDto.amount
       );
       
       if (!balance) {
