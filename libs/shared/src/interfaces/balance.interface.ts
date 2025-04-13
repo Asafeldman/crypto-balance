@@ -1,6 +1,6 @@
 export interface Balance {
   balanceId: string;
-  walletId: string;
+  userId: string;
   asset: string;
   amount: number;
   lastUpdated: string | Date;
