@@ -13,7 +13,7 @@ export const SERVICES = {
   RATE: {
     PORT: process.env.RATE_SERVICE_PORT || 3001,
     URL: process.env.RATE_SERVICE_URL || 'http://localhost:3001',
-    REFRESH_INTERVAL: process.env.RATE_REFRESH_INTERVAL || '0 */5 * * * *' // Run every 5 minutes
+    REFRESH_INTERVAL: process.env.RATE_REFRESH_INTERVAL || '0 */15 * * * *' // Run every 15 minutes
   }
 };
 
@@ -43,7 +43,6 @@ export const APP_SETTINGS = {
 export const FILE_PATHS = {
   BALANCES: 'balances.json',
   USERS: 'users.json',
-  WALLETS: 'wallets.json',
   RATES: 'rates.json'
 };
 

@@ -3,6 +3,7 @@ import { BalanceService } from './balance.service';
 import { Balance } from '../../../libs/shared/src/interfaces/balance.interface';
 import { AddBalanceDto } from './dto/add-balance.dto';
 import { UpdateBalanceDto } from './dto/update-balance.dto';
+import { RebalanceDto } from './dto/rebalance.dto';
 
 @Controller('balances')
 export class BalanceController {
@@ -24,6 +25,24 @@ export class BalanceController {
         throw error;
       }
       throw new NotFoundException(`Error calculating total balance: ${error.message}`);
+    }
+  }
+
+  @Get('allocation')
+  async getPortfolioAllocation(
+    @Headers('X-User-ID') userId: string
+  ): Promise<Record<string, number>> {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+    
+    try {
+      return await this.balanceService.getPortfolioAllocation(userId);
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to calculate portfolio allocation: ${error.message}`);
     }
   }
 
@@ -65,6 +84,28 @@ export class BalanceController {
         throw error;
       }
       throw new NotFoundException(`Error fetching balance with ID ${balanceId}`);
+    }
+  }
+
+  @Post('rebalance')
+  async rebalance(
+    @Headers('X-User-ID') userId: string,
+    @Body() rebalanceDto: RebalanceDto
+  ): Promise<Balance[]> {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+    
+    try {
+      return await this.balanceService.rebalance(
+        userId, 
+        rebalanceDto.targetPercentages
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to rebalance portfolio: ${error.message}`);
     }
   }
 
