@@ -247,8 +247,26 @@ export class RateService {
       let ratesFile = this.fileManagementService.readJsonFile<RatesFile>(this.ratesFilePath);
       const now = new Date();
       
+      const cachedRateIds = ratesFile.rates.map(r => r.id);
+      const missingCoinIds = coinIds.filter(id => !cachedRateIds.includes(id));
+      
+      let fetchedNewCoins = false;
+      if (missingCoinIds.length > 0) {
+        console.log(`Fetching new coins: ${missingCoinIds.join(', ')}`);
+        try {
+          const newRates = await this.fetchRatesFromApi(missingCoinIds, { vsCurrencies });
+          if (newRates.length > 0) {
+            ratesFile.rates = [...ratesFile.rates, ...newRates];
+            fetchedNewCoins = true;
+            console.log(`Successfully fetched ${newRates.length} new coin rates`);
+          }
+        } catch (error) {
+          console.error(`Error fetching new coins: ${error.message}`);
+        }
+      }
+      
       const cachedRates: CoinRate[] = [];
-      const coinsToFetch: { id: string, currencies: string[] }[] = [];
+      const coinsToRefresh: { id: string, currencies: string[] }[] = [];
       
       for (const coinId of coinIds) {
         const cachedRate = ratesFile.rates.find(r => r.id === coinId);
@@ -262,7 +280,7 @@ export class RateService {
             const existingCurrencies = cachedRate.currencyRateMap ? 
               Object.keys(cachedRate.currencyRateMap) : [];
             
-            coinsToFetch.push({
+            coinsToRefresh.push({
               id: coinId,
               currencies: [...new Set([...existingCurrencies, ...requestedCurrencies])]
             });
@@ -274,79 +292,63 @@ export class RateService {
           const existingCurrencies = cachedRate.currencyRateMap ? 
             Object.keys(cachedRate.currencyRateMap) : [];
           
-          coinsToFetch.push({
+          coinsToRefresh.push({
             id: coinId,
             currencies: [...new Set([...existingCurrencies, ...requestedCurrencies])]
           });
-        } else {
-          coinsToFetch.push({
-            id: coinId,
-            currencies: requestedCurrencies
-          });
         }
       }
       
-      if (coinsToFetch.length > 0) {
-        const refreshIds = coinsToFetch.map(c => c.id);
-        console.log(`Refreshing rates for coins: ${refreshIds.join(', ')}`);
+      // Refresh any stale coins or coins missing currencies
+      if (coinsToRefresh.length > 0) {
+        const idsToRefresh = coinsToRefresh.map(c => c.id);
+        console.log(`Refreshing stale or incomplete data for coins: ${idsToRefresh.join(', ')}`);
         
         try {
-          for (const coinToFetch of coinsToFetch) {
-            const freshRates = await this.fetchRatesFromApi(
-              [coinToFetch.id], 
-              { vsCurrencies: coinToFetch.currencies.join(',') }
-            );
-            
-            if (freshRates.length > 0) {
-              const freshRate = freshRates[0];
+          // Need to fetch all the requested currencies
+          const freshRates = await this.fetchRatesFromApi(
+            idsToRefresh, 
+            { vsCurrencies }
+          );
+          
+          if (freshRates.length > 0) {
+            for (const freshRate of freshRates) {
               const index = ratesFile.rates.findIndex(r => r.id === freshRate.id);
               
               if (index !== -1) {
-                const isStale = this.isRateStale(ratesFile.rates[index]);
-                
-                if (isStale) {
-                  ratesFile.rates[index] = {
-                    ...ratesFile.rates[index],
-                    currencyRateMap: freshRate.currencyRateMap,
-                    lastUpdated: now.toISOString()
-                  };
-                } else {
-                  ratesFile.rates[index] = {
-                    ...ratesFile.rates[index],
-                    currencyRateMap: {
-                      ...ratesFile.rates[index].currencyRateMap,
-                      ...freshRate.currencyRateMap
-                    },
-                    lastUpdated: now.toISOString()
-                  };
-                }
-                
-                cachedRates.push(ratesFile.rates[index]);
-              } else {
-                ratesFile.rates.push(freshRate);
-                cachedRates.push(freshRate);
+                // Merge existing rate with fresh data
+                ratesFile.rates[index] = {
+                  ...ratesFile.rates[index],
+                  currencyRateMap: {
+                    ...ratesFile.rates[index].currencyRateMap,
+                    ...freshRate.currencyRateMap
+                  },
+                  lastUpdated: now.toISOString()
+                };
               }
             }
+            
+            // Update the cache if we fetched anything
+            ratesFile.globalLastUpdated = now.toISOString();
+            this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
           }
-          
-          ratesFile.globalLastUpdated = now.toISOString();
-          this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
         } catch (error) {
-          console.error('Error fetching fresh rates:', error.message);
+          console.error(`Error refreshing stale or incomplete data: ${error.message}`);
         }
       }
       
-      return cachedRates;
-    } catch (error) {
-      console.error('Error getting rates by IDs:', error.message);
-      
-      try {
-        console.log(`Fallback: refreshing rates for coins: ${coinIds.join(', ')}`);
-        return await this.fetchRatesFromApi(coinIds, { vsCurrencies });
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError.message);
-        return [];
+      // Update the cache if we fetched any new coins
+      if (fetchedNewCoins) {
+        ratesFile.globalLastUpdated = now.toISOString();
+        this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
       }
+      
+      // Return all requested rates (should include both cached and freshly fetched)
+      return ratesFile.rates.filter(rate => coinIds.includes(rate.id));
+      
+    } catch (error) {
+      console.error(`Error fetching rates by IDs: ${error.message}`);
+      return [];
     }
   }
   
