@@ -19,6 +19,21 @@ The system consists of three microservices:
 - Node.js (v18+)
 - npm
 
+### Environment Setup
+
+This application uses environment variables for configuration. Follow these steps to set it up:
+
+1. Copy the example environment file to create your own:
+   ```
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file and update the following variables:
+   - `COINGECKO_API_KEY`: Your CoinGecko API key (get one at https://www.coingecko.com/en/api/pricing)
+   - Service ports and URLs if needed
+
+3. Save the file and restart the services
+
 ### Installation
 
 ```bash

@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { RateModule } from './rate.module';
 import { SERVICES } from '../../../libs/shared/src/constants';
-import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from '../../../libs/shared/src/error-handling/filters/http-exception.filter';
 import { ErrorHandlingService } from '../../../libs/shared/src/error-handling/error-handling.service';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(RateModule);

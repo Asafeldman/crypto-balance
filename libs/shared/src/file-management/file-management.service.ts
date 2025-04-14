@@ -9,8 +9,8 @@ export class FileManagementService {
       const resolvedPath = path.resolve(filePath);
       const fileContent = fs.readFileSync(resolvedPath, 'utf8');
       return JSON.parse(fileContent) as T;
-    } catch (error) {
-      throw new Error(`Failed to read file at ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      throw new Error(`Failed to read file at ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -24,8 +24,8 @@ export class FileManagementService {
       }
       
       fs.writeFileSync(resolvedPath, JSON.stringify(data, null, 2), 'utf8');
-    } catch (error) {
-      throw new Error(`Failed to write file at ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      throw new Error(`Failed to write file at ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -63,8 +63,8 @@ export class FileManagementService {
           fs.writeFileSync(distPath, file.emptyContent);
         }
       }
-    } catch (error) {
-      console.error(`Error ensuring data files exist: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error ensuring data files exist: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 } 
