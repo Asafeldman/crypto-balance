@@ -3,10 +3,10 @@ import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 export class AddBalanceDto {
   @IsString()
   @IsNotEmpty()
-  asset: string;
+  asset: string = '';
 
   @IsNumber()
   @IsNotEmpty()
   @Min(0)
-  amount: number;
+  amount: number = 0;
 } 

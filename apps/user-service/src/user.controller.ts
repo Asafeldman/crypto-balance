@@ -28,8 +28,8 @@ export class UserController {
   createUser(@Body() createUserDto: CreateUserDto): User {
     try {
       return this.userService.createUser(createUserDto);
-    } catch (error) {
-      if (error.message === 'A user with this email already exists') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'A user with this email already exists') {
         throw new ConflictException(error.message);
       }
       throw new InternalServerErrorException('Could not create user');

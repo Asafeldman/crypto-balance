@@ -23,7 +23,7 @@ export const SERVICES = {
 export const EXTERNAL_APIS = {
   COINGECKO: {
     BASE_URL: 'https://api.coingecko.com/api/v3',
-    API_KEY: process.env.COINGECKO_API_KEY || 'CG-c2jsaSaSe4h4JbCPQgtykoLA'
+    API_KEY: process.env.COINGECKO_API_KEY || 'CG-PepkyvSxxjcVBWPFG3cSDaNg'
   }
 };
 

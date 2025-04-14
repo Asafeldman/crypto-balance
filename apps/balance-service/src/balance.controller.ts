@@ -20,11 +20,11 @@ export class BalanceController {
     
     try {
       return await this.balanceService.getTotalBalance(userId, currency.toLowerCase());
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new NotFoundException(`Error calculating total balance: ${error.message}`);
+      throw new NotFoundException(`Error calculating total balance: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -38,11 +38,11 @@ export class BalanceController {
     
     try {
       return await this.balanceService.getPortfolioAllocation(userId);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(`Failed to calculate portfolio allocation: ${error.message}`);
+      throw new BadRequestException(`Failed to calculate portfolio allocation: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -105,7 +105,7 @@ export class BalanceController {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(`Failed to rebalance portfolio: ${error.message}`);
+      throw new BadRequestException(`Failed to rebalance portfolio: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -132,7 +132,7 @@ export class BalanceController {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new NotFoundException(`Failed to add balance for user ${userId}: ${error.message}`);
+      throw new NotFoundException(`Failed to add balance for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -162,7 +162,7 @@ export class BalanceController {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new NotFoundException(`Failed to update balance with ID ${balanceId}: ${error.message}`);
+      throw new NotFoundException(`Failed to update balance with ID ${balanceId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -187,7 +187,7 @@ export class BalanceController {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new NotFoundException(`Failed to remove balance with ID ${balanceId}: ${error.message}`);
+      throw new NotFoundException(`Failed to remove balance with ID ${balanceId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
