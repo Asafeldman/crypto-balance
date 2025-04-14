@@ -64,9 +64,9 @@ For development with hot-reload:
 
 ```bash
 # Start all services concurrently
-npm run start:dev
-```
+npm run start:all
 
+```
 ## API Endpoints
 
 ### Balance Service (PORT: 3000)

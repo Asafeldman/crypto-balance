@@ -21,6 +21,7 @@
     "start:balance": "nest start balance-service --watch",
     "start:user": "nest start user-service --watch",
     "start:rate": "nest start rate-service --watch",
+    "start:all": "concurrently \"npm run start:balance\" \"npm run start:user\" \"npm run start:rate\"",
     "test:balance": "jest --config apps/balance-service/test/jest-config.json",
     "test:balance:cov": "jest --config apps/balance-service/test/jest-config.json --coverage",
     "test:rate": "jest --config apps/rate-service/test/jest-config.json",
@@ -35,7 +36,9 @@
     "axios": "^1.8.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "concurrently": "^9.1.2",
     "dotenv": "^16.5.0",
+    "http-proxy-middleware": "^3.0.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
