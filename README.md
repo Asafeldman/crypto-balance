@@ -138,8 +138,13 @@ npm run start:dev
 - `PUT /users/:userId` - Update a user
 - `DELETE /users/:userId` - Delete a user
 
-## Notes
+## Testing
 
-- The project uses a file-based data storage system for simplicity
-- Rate caching is implemented to avoid hitting CoinGecko rate limits
-- The monorepo structure allows for shared code between services
+```bash
+# Run Balance Service tests
+npm run test:balance
+
+# Run Rate Service tests
+npm run test:rate
+```
+
