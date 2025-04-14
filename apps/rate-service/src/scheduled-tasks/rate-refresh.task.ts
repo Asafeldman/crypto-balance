@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { RateService } from '../rate.service';
 import { SERVICES } from '../../../../libs/shared/src/constants';
 
@@ -9,7 +9,7 @@ export class RateRefreshTask {
   
   constructor(private readonly rateService: RateService) {}
   
-  @Cron(SERVICES.RATE.REFRESH_INTERVAL)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async refreshRates() {
     this.logger.log('Starting scheduled rate refresh...');
     
@@ -24,8 +24,8 @@ export class RateRefreshTask {
       } else {
         this.logger.log('No coins to refresh');
       }
-    } catch (error) {
-      this.logger.error(`Error during scheduled rate refresh: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      this.logger.error(`Error during scheduled rate refresh: ${error instanceof Error ? error.message : String(error)}`, error instanceof Error ? error.stack : undefined);
     }
   }
 } 

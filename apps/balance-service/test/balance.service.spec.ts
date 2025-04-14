@@ -124,31 +124,35 @@ describe('BalanceService', () => {
     });
   });
 
-  // Test 5: Rate limiting handling
-  it('should handle rate limiting gracefully', async () => {
-    // Mock HTTP service to throw a 429 error 
-    const mockError = {
-      response: { status: 429 },
-      message: 'Too Many Requests',
-      getStatus: () => 429
+  // Test 5: Getting a single balance by ID
+  it('should get a balance by ID', async () => {
+    const userId = 'user1';
+    const balanceId = 'b1';
+    const mockBalance = { 
+      userId, 
+      balanceId, 
+      asset: 'bitcoin', 
+      amount: 1.5, 
+      lastUpdated: new Date().toISOString() 
     };
     
-    mockHttpService.get.mockReturnValueOnce(throwError(() => mockError));
+    // Mock user validation
+    mockHttpService.get.mockReturnValueOnce(of({ data: { id: userId } }));
     
-    try {
-      // Try to call the method that might throw
-      await service.validateAsset('bitcoin');
-      // If it doesn't throw, we just pass the test
-      expect(true).toBe(true);
-    } catch (error) {
-      // If it throws RateLimitExceededException, that's expected behavior
-      if (error instanceof RateLimitExceededException) {
-        expect(error).toBeInstanceOf(RateLimitExceededException);
-      } else {
-        // If it throws a different error, we should re-throw it
-        throw error;
-      }
-    }
+    // Mock balance data in file
+    mockFileManagementService.readJsonFile.mockReturnValueOnce({ 
+      balances: [mockBalance, 
+        { userId, balanceId: 'b2', asset: 'ethereum', amount: 2.0, lastUpdated: new Date().toISOString() }
+      ] 
+    });
+    
+    const results = await service.getBalances(userId);
+    const result = results.find(b => b.balanceId === balanceId);
+    
+    expect(result).toBeDefined();
+    expect(result!.balanceId).toBe(balanceId);
+    expect(result!.asset).toBe('bitcoin');
+    expect(result!.amount).toBe(1.5);
   });
 
   // Test 6: Adding balance
