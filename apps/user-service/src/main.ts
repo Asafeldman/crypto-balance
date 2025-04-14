@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { UserModule } from './user.module';
 import { SERVICES } from '../../../libs/shared/src/constants';
+import { HttpExceptionFilter } from '../../../libs/shared/src/error-handling/filters/http-exception.filter';
+import { ErrorHandlingService } from '../../../libs/shared/src/error-handling/error-handling.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(UserModule);
@@ -11,6 +13,9 @@ async function bootstrap() {
     forbidNonWhitelisted: true, 
     transform: true, 
   }));
+  
+  const errorHandlingService = new ErrorHandlingService();
+  app.useGlobalFilters(new HttpExceptionFilter(errorHandlingService));
   
   app.enableCors();
   await app.listen(SERVICES.USER.PORT);

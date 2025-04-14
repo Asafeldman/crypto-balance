@@ -4,5 +4,5 @@ export class UpdateBalanceDto {
   @IsNumber()
   @IsNotEmpty()
   @Min(0)
-  amount: number;
+  amount: number = 0;
 } 

@@ -20,8 +20,8 @@ export class UserService {
     try {
       const usersData = this.fileManagementService.readJsonFile<UsersFile>(this.usersFilePath);
       return usersData.users;
-    } catch (error) {
-      console.error(`Error retrieving users: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error retrieving users: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
@@ -36,8 +36,8 @@ export class UserService {
       }
       
       return user;
-    } catch (error) {
-      console.error(`Error retrieving user ${userId}: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error retrieving user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }
@@ -69,8 +69,8 @@ export class UserService {
       this.fileManagementService.writeJsonFile(this.usersFilePath, usersData);
       
       return newUser;
-    } catch (error) {
-      console.error(`Error creating user: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error creating user: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error('Could not create user');
     }
   }
@@ -95,8 +95,8 @@ export class UserService {
       this.fileManagementService.writeJsonFile(this.usersFilePath, usersData);
       
       return updatedUser;
-    } catch (error) {
-      console.error(`Error updating user ${userId}: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error updating user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }
@@ -118,16 +118,16 @@ export class UserService {
           balancesData.balances = balancesData.balances.filter(balance => balance.userId !== userId);
           this.fileManagementService.writeJsonFile(balancesFilePath, balancesData);
         }
-      } catch (error) {
-        console.error(`Error cleaning up balances for user ${userId}: ${error.message}`);
+      } catch (error: unknown) {
+        console.error(`Error cleaning up balances for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
       }
       
       usersData.users.splice(userIndex, 1);
       this.fileManagementService.writeJsonFile(this.usersFilePath, usersData);
       
       return userId;
-    } catch (error) {
-      console.error(`Error removing user ${userId}: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error removing user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }

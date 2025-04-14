@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { FileManagementService } from '../../../libs/shared/src/file-management/file-management.service';
 import { APP_SETTINGS, EXTERNAL_APIS } from '../../../libs/shared/src/constants';
 import { CoinRate, RateOptions, RatesFile } from '../../../libs/shared/src/interfaces/rate.interface';
+import { InvalidAssetException, RateLimitExceededException } from '../../../libs/shared/src/error-handling/exceptions';
 
 @Injectable()
 export class RateService {
@@ -68,14 +69,14 @@ export class RateService {
           
           ratesFile.globalLastUpdated = now.toISOString();
           this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
-        } catch (error) {
-          console.error('Error refreshing stale rates:', error.message);
+        } catch (error: unknown) {
+          console.error('Error refreshing stale rates:', error instanceof Error ? error.message : String(error));
         }
       }
       
       return ratesFile.rates;
-    } catch (error) {
-      console.error('Error getting cached rates:', error.message);
+    } catch (error: unknown) {
+      console.error('Error getting cached rates:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }
@@ -161,8 +162,13 @@ export class RateService {
           
           ratesFile.globalLastUpdated = now.toISOString();
           this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
-        } catch (error) {
-          console.error(`Error fetching rate for coin ${coinId}:`, error.message);
+        } catch (error: unknown) {
+          console.error(`Error fetching rate for coin ${coinId}: ${error instanceof Error ? error.message : String(error)}`);
+          
+          if (error instanceof RateLimitExceededException || error instanceof InvalidAssetException) {
+            throw error;
+          }
+          
           if (!isCoinInCache) {
             return null;
           }
@@ -197,15 +203,19 @@ export class RateService {
               ratesFile.globalLastUpdated = now.toISOString();
               this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
             }
-          } catch (error) {
-            console.error(`Error fetching missing currencies for ${coinId}:`, error.message);
+          } catch (error: unknown) {
+            console.error(`Error fetching missing currencies for ${coinId}:`, error instanceof Error ? error.message : String(error));
           }
         }
       }
       
       return coinRate || null;
-    } catch (error) {
-      console.error(`Error getting rate for coin ${coinId}:`, error.message);
+    } catch (error: unknown) {
+      console.error(`Error getting rate for coin ${coinId}: ${error instanceof Error ? error.message : String(error)}`);
+      
+      if (error instanceof RateLimitExceededException || error instanceof InvalidAssetException) {
+        throw error;
+      }
       
       try {
         console.log(`Fetching ${coinId} directly from API after error...`);
@@ -227,13 +237,13 @@ export class RateService {
           
           ratesFile.globalLastUpdated = new Date().toISOString();
           this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
-        } catch (fileError) {
-          console.error('Error updating rates file:', fileError.message);
+        } catch (fileError: unknown) {
+          console.error('Error updating rates file:', fileError instanceof Error ? fileError.message : String(fileError));
         }
         
         return fetchedRates[0];
-      } catch (fetchError) {
-        console.error(`Error fetching ${coinId} directly:`, fetchError.message);
+      } catch (fetchError: unknown) {
+        console.error(`Error fetching ${coinId} directly:`, fetchError instanceof Error ? fetchError.message : String(fetchError));
         return null;
       }
     }
@@ -260,8 +270,8 @@ export class RateService {
             fetchedNewCoins = true;
             console.log(`Successfully fetched ${newRates.length} new coin rates`);
           }
-        } catch (error) {
-          console.error(`Error fetching new coins: ${error.message}`);
+        } catch (error: unknown) {
+          console.error(`Error fetching new coins: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
@@ -328,26 +338,23 @@ export class RateService {
               }
             }
             
-            // Update the cache if we fetched anything
             ratesFile.globalLastUpdated = now.toISOString();
             this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
           }
-        } catch (error) {
-          console.error(`Error refreshing stale or incomplete data: ${error.message}`);
+        } catch (error: unknown) {
+          console.error(`Error refreshing stale or incomplete data: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
-      // Update the cache if we fetched any new coins
       if (fetchedNewCoins) {
         ratesFile.globalLastUpdated = now.toISOString();
         this.fileManagementService.writeJsonFile(this.ratesFilePath, ratesFile);
       }
       
-      // Return all requested rates (should include both cached and freshly fetched)
       return ratesFile.rates.filter(rate => coinIds.includes(rate.id));
       
-    } catch (error) {
-      console.error(`Error fetching rates by IDs: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error fetching rates by IDs: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
@@ -376,33 +383,58 @@ export class RateService {
       include_last_updated_at: true
     };
     
-    const response = await firstValueFrom(
-      this.httpService.get(url, { headers, params })
-    );
-    console.log(response.data);
-    
-    if (!response.data || Object.keys(response.data).length === 0) {
-      return [];
-    }
-    
-    return Object.entries(response.data).map(([id, data]: [string, any]) => {
-      const currencies = vsCurrencies.split(',');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, { headers, params })
+      );
+      console.log(response.data);
       
-      const currencyRateMap: { [key: string]: number } = {};
+      if (!response.data || Object.keys(response.data).length === 0) {
+        throw new InvalidAssetException(coinIds.join(', '), 'Coin(s) not found in CoinGecko');
+      }
       
-      currencies.forEach(currency => {
-        if (data[currency] !== undefined) {
-          currencyRateMap[currency] = data[currency];
-        }
+      const returnedCoinIds = Object.keys(response.data);
+      const missingCoinIds = coinIds.filter(id => !returnedCoinIds.includes(id));
+      
+      if (missingCoinIds.length > 0) {
+        throw new InvalidAssetException(missingCoinIds.join(', '), 'Coin(s) not found in CoinGecko');
+      }
+      
+      return Object.entries(response.data).map(([id, data]: [string, any]) => {
+        const currencies = vsCurrencies.split(',');
+        
+        const currencyRateMap: { [key: string]: number } = {};
+        
+        currencies.forEach(currency => {
+          if (data[currency] !== undefined) {
+            currencyRateMap[currency] = data[currency];
+          }
+        });
+        
+        return {
+          id,
+          currencyRateMap,
+          lastUpdated: data.last_updated_at 
+            ? new Date(data.last_updated_at * 1000).toISOString() 
+            : new Date().toISOString()
+        };
       });
+    } catch (error: unknown) {
+      console.error(`Error fetching rates: ${error instanceof Error ? error.message : String(error)}`);
       
-      return {
-        id,
-        currencyRateMap,
-        lastUpdated: data.last_updated_at 
-          ? new Date(data.last_updated_at * 1000).toISOString() 
-          : new Date().toISOString()
-      };
-    });
+      if (error instanceof HttpException && error.getStatus() === HttpStatus.TOO_MANY_REQUESTS) {
+        throw new RateLimitExceededException('CoinGecko');
+      }
+      
+      if (error instanceof InvalidAssetException) {
+        throw error;
+      }
+      
+      if (error instanceof HttpException && error.getStatus() === HttpStatus.NOT_FOUND) {
+        throw new InvalidAssetException(coinIds.join(', '), 'Asset not found in CoinGecko');
+      }
+      
+      throw error;
+    }
   }
 } 

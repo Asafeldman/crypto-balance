@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
- 
+import { ErrorHandlingService } from './error-handling.service';
+
 @Module({
-  providers: [],
-  exports: [],
+  providers: [ErrorHandlingService],
+  exports: [ErrorHandlingService],
 })
 export class ErrorHandlingModule {} 
